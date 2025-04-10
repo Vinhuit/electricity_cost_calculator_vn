@@ -2,21 +2,38 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Electricity Cost Calculator VN",
-        "description": "Select at least one sensor (kWh, Power, or Current and Voltage) and provide a name for the device. Note: Ensure the selected sensor provides a numeric value appropriate for the calculation.",
+        "title": "Set up Electricity Cost Calculator VN - Step 1: Sensors",
+        "description": "Select at least one sensor (kWh, Power, or Current and Voltage). Optionally, provide a name for the device. If no name is provided, a default name will be generated based on the selected sensor.",
         "data": {
           "kwh_sensor": "kWh Sensor (optional)",
           "power_sensor": "Power Sensor (W, optional)",
           "current_sensor": "Current Sensor (A, optional)",
           "voltage_sensor": "Voltage Sensor (V, optional)",
-          "device_name": "Device Name"
+          "device_name": "Device Name (optional)"
+        }
+      },
+      "pricing": {
+        "title": "Set up Electricity Cost Calculator VN - Step 2: Pricing",
+        "description": "Configure the pricing tiers, VAT rate, and cost unit. Pricing tiers are in cost per kWh, VAT rate is a decimal (e.g., 0.1 for 10%), and cost unit is the currency (e.g., VND, USD).",
+        "data": {
+          "tier_1_rate": "Tier 1 Rate (0–50 kWh, per kWh)",
+          "tier_2_rate": "Tier 2 Rate (51–100 kWh, per kWh)",
+          "tier_3_rate": "Tier 3 Rate (101–200 kWh, per kWh)",
+          "tier_4_rate": "Tier 4 Rate (201–300 kWh, per kWh)",
+          "tier_5_rate": "Tier 5 Rate (301–400 kWh, per kWh)",
+          "tier_6_rate": "Tier 6 Rate (401+ kWh, per kWh)",
+          "vat_rate": "VAT Rate (e.g., 0.1 for 10%)",
+          "cost_unit": "Cost Unit (e.g., VND, USD)"
         }
       }
     },
     "error": {
       "invalid_sensor": "The selected sensor is invalid or unavailable. Please select a different sensor.",
       "no_sensors": "No sensors were found. Please ensure you have sensor entities in Home Assistant.",
-      "no_sensor_selected": "Please select at least one sensor (kWh, Power, or Current and Voltage)."
+      "no_sensor_selected": "Please select at least one sensor (kWh, Power, or Current and Voltage).",
+      "invalid_number": "Please enter a valid number.",
+      "negative_value": "Values must be non-negative.",
+      "empty_cost_unit": "Please enter a cost unit (e.g., VND, USD)."
     }
   }
 }

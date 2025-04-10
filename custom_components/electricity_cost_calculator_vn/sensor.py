@@ -14,13 +14,14 @@ from .const import (
     CONF_CURRENT_SENSOR,
     CONF_VOLTAGE_SENSOR,
     CONF_DEVICE_NAME,
-    TIER_1_RATE,
-    TIER_2_RATE,
-    TIER_3_RATE,
-    TIER_4_RATE,
-    TIER_5_RATE,
-    TIER_6_RATE,
-    VAT_RATE,
+    CONF_TIER_1_RATE,
+    CONF_TIER_2_RATE,
+    CONF_TIER_3_RATE,
+    CONF_TIER_4_RATE,
+    CONF_TIER_5_RATE,
+    CONF_TIER_6_RATE,
+    CONF_VAT_RATE,
+    CONF_COST_UNIT,
     SENSOR_COST,
     SENSOR_COST_WITH_VAT,
 )
@@ -58,6 +59,18 @@ class ElectricityCostSensor(SensorEntity):
         self.device_name = device_name
         self.include_vat = include_vat
 
+        # Get pricing tiers, VAT rate, and cost unit from config entry
+        self.tier_1_rate = entry.data[CONF_TIER_1_RATE]
+        self.tier_2_rate = entry.data[CONF_TIER_2_RATE]
+        self.tier_3_rate = entry.data[CONF_TIER_3_RATE]
+        self.tier_4_rate = entry.data[CONF_TIER_4_RATE]
+        self.tier_5_rate = entry.data[CONF_TIER_5_RATE]
+        self.tier_6_rate = entry.data[CONF_TIER_6_RATE]
+        self.vat_rate = entry.data[CONF_VAT_RATE]
+        self.cost_unit = entry.data[CONF_COST_UNIT]
+
+        _LOGGER.info("Creating sensor for device: %s with cost unit: %s", self.device_name, self.cost_unit)
+
         # Sensor attributes
         self._attr_name = (
             f"{device_name} Electricity Cost{' with VAT' if include_vat else ''}"
@@ -65,7 +78,7 @@ class ElectricityCostSensor(SensorEntity):
         self._attr_unique_id = (
             f"{entry.entry_id}_{SENSOR_COST_WITH_VAT if include_vat else SENSOR_COST}"
         )
-        self._attr_unit_of_measurement = "VND"
+        self._attr_unit_of_measurement = self.cost_unit
         self._attr_device_class = "monetary"
         self._attr_state_class = "total"
 
@@ -149,21 +162,21 @@ class ElectricityCostSensor(SensorEntity):
         cost = 0
         if kwh_value > 0:
             if kwh_value <= 50:
-                cost = kwh_value * TIER_1_RATE
+                cost = kwh_value * self.tier_1_rate
             elif kwh_value <= 100:
-                cost = (50 * TIER_1_RATE) + ((kwh_value - 50) * TIER_2_RATE)
+                cost = (50 * self.tier_1_rate) + ((kwh_value - 50) * self.tier_2_rate)
             elif kwh_value <= 200:
-                cost = (50 * TIER_1_RATE) + (50 * TIER_2_RATE) + ((kwh_value - 100) * TIER_3_RATE)
+                cost = (50 * self.tier_1_rate) + (50 * self.tier_2_rate) + ((kwh_value - 100) * self.tier_3_rate)
             elif kwh_value <= 300:
-                cost = (50 * TIER_1_RATE) + (50 * TIER_2_RATE) + (100 * TIER_3_RATE) + ((kwh_value - 200) * TIER_4_RATE)
+                cost = (50 * self.tier_1_rate) + (50 * self.tier_2_rate) + (100 * self.tier_3_rate) + ((kwh_value - 200) * self.tier_4_rate)
             elif kwh_value <= 400:
-                cost = (50 * TIER_1_RATE) + (50 * TIER_2_RATE) + (100 * TIER_3_RATE) + (100 * TIER_4_RATE) + ((kwh_value - 300) * TIER_5_RATE)
+                cost = (50 * self.tier_1_rate) + (50 * self.tier_2_rate) + (100 * self.tier_3_rate) + (100 * self.tier_4_rate) + ((kwh_value - 300) * self.tier_5_rate)
             else:
-                cost = (50 * TIER_1_RATE) + (50 * TIER_2_RATE) + (100 * TIER_3_RATE) + (100 * TIER_4_RATE) + (100 * TIER_5_RATE) + ((kwh_value - 400) * TIER_6_RATE)
+                cost = (50 * self.tier_1_rate) + (50 * self.tier_2_rate) + (100 * self.tier_3_rate) + (100 * self.tier_4_rate) + (100 * self.tier_5_rate) + ((kwh_value - 400) * self.tier_6_rate)
 
         # Add VAT if applicable
         if self.include_vat:
-            cost = cost * (1 + VAT_RATE)
+            cost = cost * (1 + self.vat_rate)
 
         return round(cost)
 

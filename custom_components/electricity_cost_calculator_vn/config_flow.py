@@ -6,16 +6,43 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-from .const import DOMAIN, CONF_KWH_SENSOR, CONF_POWER_SENSOR, CONF_CURRENT_SENSOR, CONF_VOLTAGE_SENSOR, CONF_DEVICE_NAME
+from .const import (
+    DOMAIN,
+    CONF_KWH_SENSOR,
+    CONF_POWER_SENSOR,
+    CONF_CURRENT_SENSOR,
+    CONF_VOLTAGE_SENSOR,
+    CONF_DEVICE_NAME,
+    CONF_TIER_1_RATE,
+    CONF_TIER_2_RATE,
+    CONF_TIER_3_RATE,
+    CONF_TIER_4_RATE,
+    CONF_TIER_5_RATE,
+    CONF_TIER_6_RATE,
+    CONF_VAT_RATE,
+    CONF_COST_UNIT,
+    DEFAULT_TIER_1_RATE,
+    DEFAULT_TIER_2_RATE,
+    DEFAULT_TIER_3_RATE,
+    DEFAULT_TIER_4_RATE,
+    DEFAULT_TIER_5_RATE,
+    DEFAULT_TIER_6_RATE,
+    DEFAULT_VAT_RATE,
+    DEFAULT_COST_UNIT,
+)
 
 class ElectricityCostCalculatorVNConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Electricity Cost Calculator VN."""
 
     VERSION = 1
 
+    def __init__(self):
+        """Initialize the config flow."""
+        self._data = {}
+
     async def async_step_user(self, user_input=None):
-        """Handle the initial step."""
-        _LOGGER.info("Starting Config Flow for Electricity Cost Calculator VN")
+        """Handle the initial step: sensor and device name selection."""
+        _LOGGER.info("Starting Config Flow for Electricity Cost Calculator VN - Step 1")
         errors = {}
 
         # Get all sensors from the entity registry
@@ -33,7 +60,7 @@ class ElectricityCostCalculatorVNConfigFlow(config_entries.ConfigFlow, domain=DO
             errors["base"] = "no_sensors"
 
         if user_input is not None:
-            _LOGGER.info("Received user input: %s", user_input)
+            _LOGGER.info("Received user input (Step 1): %s", user_input)
             # Validate that at least one sensor type is provided
             if not (user_input.get(CONF_KWH_SENSOR) or user_input.get(CONF_POWER_SENSOR) or (user_input.get(CONF_CURRENT_SENSOR) and user_input.get(CONF_VOLTAGE_SENSOR))):
                 errors["base"] = "no_sensor_selected"
@@ -52,12 +79,26 @@ class ElectricityCostCalculatorVNConfigFlow(config_entries.ConfigFlow, domain=DO
                             break
 
                 if not errors:
-                    await self.async_set_unique_id(user_input[CONF_DEVICE_NAME])
-                    self._abort_if_unique_id_configured()
-                    return self.async_create_entry(
-                        title=user_input[CONF_DEVICE_NAME],
-                        data=user_input,
-                    )
+                    # Store the user input from this step
+                    self._data.update(user_input)
+                    # Generate a default device name if none is provided
+                    device_name = self._data.get(CONF_DEVICE_NAME)
+                    if not device_name:
+                        for sensor_id in [
+                            self._data.get(CONF_KWH_SENSOR),
+                            self._data.get(CONF_POWER_SENSOR),
+                            self._data.get(CONF_CURRENT_SENSOR),
+                            self._data.get(CONF_VOLTAGE_SENSOR),
+                        ]:
+                            if sensor_id:
+                                device_name = sensor_id.replace("sensor.", "").replace("_", " ").title()
+                                break
+                        if not device_name:
+                            device_name = "Electricity Cost Device"
+                    self._data[CONF_DEVICE_NAME] = device_name
+
+                    # Proceed to the pricing step
+                    return await self.async_step_pricing()
 
         return self.async_show_form(
             step_id="user",
@@ -67,7 +108,65 @@ class ElectricityCostCalculatorVNConfigFlow(config_entries.ConfigFlow, domain=DO
                     vol.Optional(CONF_POWER_SENSOR): vol.In(all_sensors),
                     vol.Optional(CONF_CURRENT_SENSOR): vol.In(all_sensors),
                     vol.Optional(CONF_VOLTAGE_SENSOR): vol.In(all_sensors),
-                    vol.Required(CONF_DEVICE_NAME): str,
+                    vol.Optional(CONF_DEVICE_NAME): str,
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_pricing(self, user_input=None):
+        """Handle the pricing configuration step."""
+        _LOGGER.info("Config Flow for Electricity Cost Calculator VN - Step 2: Pricing")
+        errors = {}
+
+        if user_input is not None:
+            _LOGGER.info("Received user input (Step 2): %s", user_input)
+            # Validate the pricing inputs (ensure they are positive numbers)
+            for key in [
+                CONF_TIER_1_RATE,
+                CONF_TIER_2_RATE,
+                CONF_TIER_3_RATE,
+                CONF_TIER_4_RATE,
+                CONF_TIER_5_RATE,
+                CONF_TIER_6_RATE,
+                CONF_VAT_RATE,
+            ]:
+                value = user_input.get(key)
+                try:
+                    value = float(value)
+                    if value < 0:
+                        errors[key] = "negative_value"
+                except (ValueError, TypeError):
+                    errors[key] = "invalid_number"
+
+            # Validate the cost unit (ensure it's not empty)
+            cost_unit = user_input.get(CONF_COST_UNIT)
+            if not cost_unit:
+                errors[CONF_COST_UNIT] = "empty_cost_unit"
+
+            if not errors:
+                # Store the pricing data
+                self._data.update(user_input)
+                # Set the unique ID and create the config entry
+                await self.async_set_unique_id(self._data[CONF_DEVICE_NAME])
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(
+                    title=self._data[CONF_DEVICE_NAME],
+                    data=self._data,
+                )
+
+        return self.async_show_form(
+            step_id="pricing",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_TIER_1_RATE, default=DEFAULT_TIER_1_RATE): float,
+                    vol.Required(CONF_TIER_2_RATE, default=DEFAULT_TIER_2_RATE): float,
+                    vol.Required(CONF_TIER_3_RATE, default=DEFAULT_TIER_3_RATE): float,
+                    vol.Required(CONF_TIER_4_RATE, default=DEFAULT_TIER_4_RATE): float,
+                    vol.Required(CONF_TIER_5_RATE, default=DEFAULT_TIER_5_RATE): float,
+                    vol.Required(CONF_TIER_6_RATE, default=DEFAULT_TIER_6_RATE): float,
+                    vol.Required(CONF_VAT_RATE, default=DEFAULT_VAT_RATE): float,
+                    vol.Required(CONF_COST_UNIT, default=DEFAULT_COST_UNIT): str,
                 }
             ),
             errors=errors,
@@ -85,7 +184,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
-        """Manage the options."""
+        """Manage the options: sensors, device name, pricing, and cost unit."""
         # Get all sensors from the entity registry
         entity_registry = er.async_get(self.hass)
         all_sensors = [
@@ -97,6 +196,22 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         all_sensors.insert(0, None)
 
         if user_input is not None:
+            # Generate a default device name if none is provided
+            device_name = user_input.get(CONF_DEVICE_NAME)
+            if not device_name:
+                for sensor_id in [
+                    user_input.get(CONF_KWH_SENSOR),
+                    user_input.get(CONF_POWER_SENSOR),
+                    user_input.get(CONF_CURRENT_SENSOR),
+                    user_input.get(CONF_VOLTAGE_SENSOR),
+                ]:
+                    if sensor_id:
+                        device_name = sensor_id.replace("sensor.", "").replace("_", " ").title()
+                        break
+                if not device_name:
+                    device_name = "Electricity Cost Device"
+            user_input[CONF_DEVICE_NAME] = device_name
+
             return self.async_create_entry(title="", data=user_input)
 
         return self.async_show_form(
@@ -119,9 +234,41 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_VOLTAGE_SENSOR,
                         default=self.config_entry.data.get(CONF_VOLTAGE_SENSOR),
                     ): vol.In(all_sensors),
-                    vol.Required(
+                    vol.Optional(
                         CONF_DEVICE_NAME,
                         default=self.config_entry.data.get(CONF_DEVICE_NAME),
+                    ): str,
+                    vol.Required(
+                        CONF_TIER_1_RATE,
+                        default=self.config_entry.data.get(CONF_TIER_1_RATE, DEFAULT_TIER_1_RATE),
+                    ): float,
+                    vol.Required(
+                        CONF_TIER_2_RATE,
+                        default=self.config_entry.data.get(CONF_TIER_2_RATE, DEFAULT_TIER_2_RATE),
+                    ): float,
+                    vol.Required(
+                        CONF_TIER_3_RATE,
+                        default=self.config_entry.data.get(CONF_TIER_3_RATE, DEFAULT_TIER_3_RATE),
+                    ): float,
+                    vol.Required(
+                        CONF_TIER_4_RATE,
+                        default=self.config_entry.data.get(CONF_TIER_4_RATE, DEFAULT_TIER_4_RATE),
+                    ): float,
+                    vol.Required(
+                        CONF_TIER_5_RATE,
+                        default=self.config_entry.data.get(CONF_TIER_5_RATE, DEFAULT_TIER_5_RATE),
+                    ): float,
+                    vol.Required(
+                        CONF_TIER_6_RATE,
+                        default=self.config_entry.data.get(CONF_TIER_6_RATE, DEFAULT_TIER_6_RATE),
+                    ): float,
+                    vol.Required(
+                        CONF_VAT_RATE,
+                        default=self.config_entry.data.get(CONF_VAT_RATE, DEFAULT_VAT_RATE),
+                    ): float,
+                    vol.Required(
+                        CONF_COST_UNIT,
+                        default=self.config_entry.data.get(CONF_COST_UNIT, DEFAULT_COST_UNIT),
                     ): str,
                 }
             ),
