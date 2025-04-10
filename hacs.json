@@ -1,7 +1,5 @@
 {
-    "name": "Electricity Cost Calculator",
-    "content_in_root": false,
+    "name": "Electricity Cost Calculator",    
     "render_readme": true,
-    "zip_release": true,
-    "filename": "electricity_cost_calculator.zip"
-  }
+    "homeassistant": "2023.5.0"
+}
