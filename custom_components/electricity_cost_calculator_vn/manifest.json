@@ -1,7 +1,7 @@
 {
     "domain": "electricity_cost_calculator_vn",
     "name": "Electricity Cost Calculator VN",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "documentation": "https://github.com/Vinhuit/electricity_cost_calculator_vn",
     "issue_tracker": "https://github.com/Vinhuit/electricity_cost_calculator_vn/issues",
     "dependencies": [],
