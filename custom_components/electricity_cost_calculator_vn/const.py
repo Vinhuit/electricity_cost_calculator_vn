@@ -16,15 +16,15 @@ CONF_VAT_RATE = "vat_rate"  # VAT percentage
 CONF_COST_UNIT = "cost_unit"  # Currency unit for cost
 
 # Default values (used as fallback in Config Flow)
-DEFAULT_TIER_1_RATE = 1678
-DEFAULT_TIER_2_RATE = 1734
-DEFAULT_TIER_3_RATE = 2014
-DEFAULT_TIER_4_RATE = 2536
-DEFAULT_TIER_5_RATE = 2834
-DEFAULT_TIER_6_RATE = 2927
-DEFAULT_VAT_RATE = 0.1  # 10%
+DEFAULT_TIER_1_RATE = "1678"
+DEFAULT_TIER_2_RATE = "1734"
+DEFAULT_TIER_3_RATE = "2014"
+DEFAULT_TIER_4_RATE = "2536"
+DEFAULT_TIER_5_RATE = "2834"
+DEFAULT_TIER_6_RATE = "2927"
+DEFAULT_VAT_RATE = "0.1"  # 10%
 DEFAULT_COST_UNIT = "VND"
-
-# Sensor suffixes
-SENSOR_COST = "electricity_cost"
-SENSOR_COST_WITH_VAT = "electricity_cost_with_vat"
+# Sensor types
+SENSOR_COST = "cost"
+SENSOR_COST_WITH_VAT = "cost_with_vat"
+SENSOR_KWH = "kwh"
