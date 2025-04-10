@@ -3,10 +3,16 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 from .const import (
     DOMAIN,
     CONF_KWH_SENSOR,
+    CONF_POWER_SENSOR,
+    CONF_CURRENT_SENSOR,
+    CONF_VOLTAGE_SENSOR,
     CONF_DEVICE_NAME,
     TIER_1_RATE,
     TIER_2_RATE,
@@ -25,24 +31,30 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    kwh_sensor = entry.data[CONF_KWH_SENSOR]
+    kwh_sensor = entry.data.get(CONF_KWH_SENSOR)
+    power_sensor = entry.data.get(CONF_POWER_SENSOR)
+    current_sensor = entry.data.get(CONF_CURRENT_SENSOR)
+    voltage_sensor = entry.data.get(CONF_VOLTAGE_SENSOR)
     device_name = entry.data[CONF_DEVICE_NAME]
 
     # Create two sensors: cost without VAT and cost with VAT
     sensors = [
-        ElectricityCostSensor(hass, entry, kwh_sensor, device_name, False),
-        ElectricityCostSensor(hass, entry, kwh_sensor, device_name, True),
+        ElectricityCostSensor(hass, entry, kwh_sensor, power_sensor, current_sensor, voltage_sensor, device_name, False),
+        ElectricityCostSensor(hass, entry, kwh_sensor, power_sensor, current_sensor, voltage_sensor, device_name, True),
     ]
     async_add_entities(sensors)
 
 class ElectricityCostSensor(SensorEntity):
     """Representation of an electricity cost sensor."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, kwh_sensor: str, device_name: str, include_vat: bool):
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, kwh_sensor: str, power_sensor: str, current_sensor: str, voltage_sensor: str, device_name: str, include_vat: bool):
         """Initialize the sensor."""
         self.hass = hass
         self.entry = entry
         self.kwh_sensor = kwh_sensor
+        self.power_sensor = power_sensor
+        self.current_sensor = current_sensor
+        self.voltage_sensor = voltage_sensor
         self.device_name = device_name
         self.include_vat = include_vat
 
@@ -60,14 +72,77 @@ class ElectricityCostSensor(SensorEntity):
     @property
     def state(self) -> StateType:
         """Return the state of the sensor."""
-        # Get the kWh value
-        kwh = self.hass.states.get(self.kwh_sensor)
-        if kwh is None or kwh.state in ("unknown", "unavailable"):
-            return 0
+        kwh_value = 0.0
 
-        try:
-            kwh_value = float(kwh.state)
-        except (ValueError, TypeError):
+        # If a kWh sensor is provided, use it (normalize units if necessary)
+        if self.kwh_sensor:
+            kwh_state = self.hass.states.get(self.kwh_sensor)
+            if kwh_state is None or kwh_state.state in ("unknown", "unavailable"):
+                _LOGGER.warning("kWh sensor %s is unavailable", self.kwh_sensor)
+                return 0
+            try:
+                value = float(kwh_state.state)
+                # Normalize units (e.g., Wh to kWh, MJ to kWh)
+                unit = kwh_state.attributes.get("unit_of_measurement", "").lower()
+                if unit == "kwh":
+                    kwh_value = value
+                elif unit == "wh":
+                    kwh_value = value / 1000  # Convert Wh to kWh
+                elif unit == "mj":
+                    kwh_value = value * 0.277778  # Convert MJ to kWh (1 MJ = 0.277778 kWh)
+                else:
+                    _LOGGER.warning("Unsupported unit for kWh sensor %s: %s", self.kwh_sensor, unit)
+                    return 0
+            except (ValueError, TypeError):
+                _LOGGER.warning("Invalid kWh value from sensor %s: %s", self.kwh_sensor, kwh_state.state)
+                return 0
+
+        # If a power sensor (W) is provided, convert to kWh
+        elif self.power_sensor:
+            power_state = self.hass.states.get(self.power_sensor)
+            if power_state is None or power_state.state in ("unknown", "unavailable"):
+                _LOGGER.warning("Power sensor %s is unavailable", self.power_sensor)
+                return 0
+            try:
+                value = float(power_state.state)
+                # Normalize units (e.g., kW to W)
+                unit = power_state.attributes.get("unit_of_measurement", "").lower()
+                if unit == "w":
+                    power_value = value
+                elif unit == "kw":
+                    power_value = value * 1000  # Convert kW to W
+                else:
+                    _LOGGER.warning("Unsupported unit for power sensor %s: %s", self.power_sensor, unit)
+                    return 0
+                # Assume the power value is an average over 1 hour for simplicity
+                kwh_value = (power_value * 1) / 1000
+            except (ValueError, TypeError):
+                _LOGGER.warning("Invalid power value from sensor %s: %s", self.power_sensor, power_state.state)
+                return 0
+
+        # If current (A) and voltage (V) sensors are provided, calculate power and convert to kWh
+        elif self.current_sensor and self.voltage_sensor:
+            current_state = self.hass.states.get(self.current_sensor)
+            voltage_state = self.hass.states.get(self.voltage_sensor)
+            if current_state is None or current_state.state in ("unknown", "unavailable"):
+                _LOGGER.warning("Current sensor %s is unavailable", self.current_sensor)
+                return 0
+            if voltage_state is None or voltage_state.state in ("unknown", "unavailable"):
+                _LOGGER.warning("Voltage sensor %s is unavailable", self.voltage_sensor)
+                return 0
+            try:
+                current_value = float(current_state.state)
+                voltage_value = float(voltage_state.state)
+                # Power (W) = Voltage (V) * Current (A)
+                power_value = voltage_value * current_value
+                # W to kWh: (W * hours) / 1000
+                kwh_value = (power_value * 1) / 1000
+            except (ValueError, TypeError):
+                _LOGGER.warning("Invalid current or voltage value: current=%s, voltage=%s", current_state.state, voltage_state.state)
+                return 0
+
+        else:
+            _LOGGER.warning("No valid sensor provided for device %s", self.device_name)
             return 0
 
         # Calculate the cost using the tiered pricing structure
