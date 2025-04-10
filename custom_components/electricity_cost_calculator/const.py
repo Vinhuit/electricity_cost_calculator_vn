@@ -1,4 +1,4 @@
-DOMAIN = "electricity_cost_calculator"
+DOMAIN = "electricity_cost_calculator_vn"
 
 # Configuration keys
 CONF_KWH_SENSOR = "kwh_sensor"
