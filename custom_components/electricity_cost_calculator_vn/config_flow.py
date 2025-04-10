@@ -4,8 +4,8 @@ import voluptuous as vol
 
 from .const import DOMAIN, CONF_KWH_SENSOR, CONF_DEVICE_NAME
 
-class ElectricityCostCalculatorConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Electricity Cost Calculator."""
+class ElectricityCostCalculatorVNConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Electricity Cost Calculator VN."""
 
     VERSION = 1
 
@@ -14,11 +14,10 @@ class ElectricityCostCalculatorConfigFlow(config_entries.ConfigFlow, domain=DOMA
         errors = {}
 
         if user_input is not None:
-            # Validate the input
+            # Validate the kWh sensor
             kwh_sensor = user_input[CONF_KWH_SENSOR]
-            if not await self.hass.async_add_executor_job(
-                lambda: self.hass.states.get(kwh_sensor) is not None
-            ):
+            state = self.hass.states.get(kwh_sensor)
+            if state is None or state.state in ("unknown", "unavailable"):
                 errors["base"] = "invalid_sensor"
             else:
                 # Use the device name as the unique ID
