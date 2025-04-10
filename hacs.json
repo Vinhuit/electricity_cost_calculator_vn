@@ -2,5 +2,6 @@
     "name": "Electricity Cost Calculator",
     "content_in_root": false,
     "render_readme": true,
-    "filename": null
+    "zip_release": true,
+    "filename": "Electricity_Cost_Calculator.zip"
   }
