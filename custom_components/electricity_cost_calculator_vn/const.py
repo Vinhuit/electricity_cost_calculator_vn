@@ -2,6 +2,9 @@ DOMAIN = "electricity_cost_calculator_vn"
 
 # Configuration keys
 CONF_KWH_SENSOR = "kwh_sensor"
+CONF_POWER_SENSOR = "power_sensor"
+CONF_CURRENT_SENSOR = "current_sensor"
+CONF_VOLTAGE_SENSOR = "voltage_sensor"
 CONF_DEVICE_NAME = "device_name"
 
 # Tiered pricing structure (VND/kWh)

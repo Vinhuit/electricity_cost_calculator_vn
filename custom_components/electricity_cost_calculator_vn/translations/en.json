@@ -1,17 +1,22 @@
 {
-    "config": {
-      "step": {
-        "user": {
-          "title": "Set up Electricity Cost Calculator VN",
-          "description": "Enter the kWh sensor and a name for the device.",
-          "data": {
-            "kwh_sensor": "kWh Sensor",
-            "device_name": "Device Name"
-          }
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Electricity Cost Calculator VN",
+        "description": "Select at least one sensor (kWh, Power, or Current and Voltage) and provide a name for the device. Note: Ensure the selected sensor provides a numeric value appropriate for the calculation.",
+        "data": {
+          "kwh_sensor": "kWh Sensor (optional)",
+          "power_sensor": "Power Sensor (W, optional)",
+          "current_sensor": "Current Sensor (A, optional)",
+          "voltage_sensor": "Voltage Sensor (V, optional)",
+          "device_name": "Device Name"
         }
-      },
-      "error": {
-        "invalid_sensor": "The specified kWh sensor is invalid or unavailable. Please check the entity ID and try again."
       }
+    },
+    "error": {
+      "invalid_sensor": "The selected sensor is invalid or unavailable. Please select a different sensor.",
+      "no_sensors": "No sensors were found. Please ensure you have sensor entities in Home Assistant.",
+      "no_sensor_selected": "Please select at least one sensor (kWh, Power, or Current and Voltage)."
     }
   }
+}
