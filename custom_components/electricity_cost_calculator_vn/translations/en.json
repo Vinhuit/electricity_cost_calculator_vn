@@ -14,14 +14,14 @@
       },
       "pricing": {
         "title": "Set up Electricity Cost Calculator VN - Step 2: Pricing",
-        "description": "Configure the pricing tiers, VAT rate, and cost unit. Pricing tiers are in cost per kWh, VAT rate is a decimal (e.g., 0.1 for 10%), and cost unit is the currency (e.g., VND, USD).",
+        "description": "Configure the pricing tiers, VAT rate, and cost unit. Only Tier 1 Rate is required; other tiers will default to Tier 1 Rate if not provided. Pricing tiers are in cost per kWh, VAT rate is a decimal (e.g., 0.1 for 10%), and cost unit is the currency (e.g., VND, USD).",
         "data": {
-          "tier_1_rate": "Tier 1 Rate (0–50 kWh, per kWh)",
-          "tier_2_rate": "Tier 2 Rate (51–100 kWh, per kWh)",
-          "tier_3_rate": "Tier 3 Rate (101–200 kWh, per kWh)",
-          "tier_4_rate": "Tier 4 Rate (201–300 kWh, per kWh)",
-          "tier_5_rate": "Tier 5 Rate (301–400 kWh, per kWh)",
-          "tier_6_rate": "Tier 6 Rate (401+ kWh, per kWh)",
+          "tier_1_rate": "Tier 1 Rate (0–50 kWh, per kWh) [Required]",
+          "tier_2_rate": "Tier 2 Rate (51–100 kWh, per kWh) [Optional]",
+          "tier_3_rate": "Tier 3 Rate (101–200 kWh, per kWh) [Optional]",
+          "tier_4_rate": "Tier 4 Rate (201–300 kWh, per kWh) [Optional]",
+          "tier_5_rate": "Tier 5 Rate (301–400 kWh, per kWh) [Optional]",
+          "tier_6_rate": "Tier 6 Rate (401+ kWh, per kWh) [Optional]",
           "vat_rate": "VAT Rate (e.g., 0.1 for 10%)",
           "cost_unit": "Cost Unit (e.g., VND, USD)"
         }

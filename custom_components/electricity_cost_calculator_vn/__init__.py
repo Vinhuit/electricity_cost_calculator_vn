@@ -1,4 +1,5 @@
 import logging
+import re
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,33 +51,55 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
             # Add default pricing tiers, VAT rate, and cost unit if not provided
             entry.setdefault(CONF_TIER_1_RATE, DEFAULT_TIER_1_RATE)
-            entry.setdefault(CONF_TIER_2_RATE, DEFAULT_TIER_2_RATE)
-            entry.setdefault(CONF_TIER_3_RATE, DEFAULT_TIER_3_RATE)
-            entry.setdefault(CONF_TIER_4_RATE, DEFAULT_TIER_4_RATE)
-            entry.setdefault(CONF_TIER_5_RATE, DEFAULT_TIER_5_RATE)
-            entry.setdefault(CONF_TIER_6_RATE, DEFAULT_TIER_6_RATE)
             entry.setdefault(CONF_VAT_RATE, DEFAULT_VAT_RATE)
             entry.setdefault(CONF_COST_UNIT, DEFAULT_COST_UNIT)
 
-            # Validate pricing tiers and VAT rate
+            # Clean and validate tier_1_rate and vat_rate
+            for key in [CONF_TIER_1_RATE, CONF_VAT_RATE]:
+                value = entry.get(key)
+                if value is None or str(value).strip() == "":
+                    _LOGGER.error("Missing value for %s in YAML config", key)
+                    return False
+                # Clean the input
+                cleaned_value = str(value).strip()
+                cleaned_value = re.sub(r"[^\d.-]", "", cleaned_value)
+                try:
+                    float_value = float(cleaned_value)
+                    if float_value < 0:
+                        _LOGGER.error("Invalid value for %s in YAML config: %s (must be non-negative)", key, value)
+                        return False
+                    # Update the entry with the cleaned float value
+                    entry[key] = float_value
+                except (ValueError, TypeError):
+                    _LOGGER.error("Invalid value for %s in YAML config: %s (must be a number)", key, value)
+                    return False
+
+            # Set optional tier rates to tier_1_rate if not provided
+            tier_1_rate = entry[CONF_TIER_1_RATE]
             for key in [
-                CONF_TIER_1_RATE,
                 CONF_TIER_2_RATE,
                 CONF_TIER_3_RATE,
                 CONF_TIER_4_RATE,
                 CONF_TIER_5_RATE,
                 CONF_TIER_6_RATE,
-                CONF_VAT_RATE,
             ]:
-                value = entry.get(key)
-                try:
-                    float_value = float(value)
-                    if float_value < 0:
-                        _LOGGER.error("Invalid value for %s in YAML config: %s (must be non-negative)", key, value)
+                if key not in entry or entry[key] is None or str(entry[key]).strip() == "":
+                    entry[key] = tier_1_rate
+                else:
+                    value = entry[key]
+                    # Clean the input
+                    cleaned_value = str(value).strip()
+                    cleaned_value = re.sub(r"[^\d.-]", "", cleaned_value)
+                    try:
+                        float_value = float(cleaned_value)
+                        if float_value < 0:
+                            _LOGGER.error("Invalid value for %s in YAML config: %s (must be non-negative)", key, value)
+                            return False
+                        # Update the entry with the cleaned float value
+                        entry[key] = float_value
+                    except (ValueError, TypeError):
+                        _LOGGER.error("Invalid value for %s in YAML config: %s (must be a number)", key, value)
                         return False
-                except (ValueError, TypeError):
-                    _LOGGER.error("Invalid value for %s in YAML config: %s (must be a number)", key, value)
-                    return False
 
             # Validate cost unit
             cost_unit = entry.get(CONF_COST_UNIT)

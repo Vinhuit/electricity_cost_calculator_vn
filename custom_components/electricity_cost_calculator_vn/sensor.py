@@ -90,7 +90,18 @@ class ElectricityCostSensor(SensorEntity):
 
         self.cost_unit = entry.data[CONF_COST_UNIT]
 
-        _LOGGER.info("Creating sensor for device: %s with cost unit: %s", self.device_name, self.cost_unit)
+        _LOGGER.info(
+            "Creating sensor for device: %s with cost unit: %s, pricing tiers: %s, %s, %s, %s, %s, %s, VAT rate: %s",
+            self.device_name,
+            self.cost_unit,
+            self.tier_1_rate,
+            self.tier_2_rate,
+            self.tier_3_rate,
+            self.tier_4_rate,
+            self.tier_5_rate,
+            self.tier_6_rate,
+            self.vat_rate,
+        )
 
         # Sensor attributes
         self._attr_name = (
