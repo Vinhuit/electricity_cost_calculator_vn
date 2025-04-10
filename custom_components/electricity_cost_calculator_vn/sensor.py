@@ -38,6 +38,22 @@ async def async_setup_entry(
     voltage_sensor = entry.data.get(CONF_VOLTAGE_SENSOR)
     device_name = entry.data[CONF_DEVICE_NAME]
 
+    # Validate that the pricing tiers and VAT rate are present and valid
+    required_fields = [
+        CONF_TIER_1_RATE,
+        CONF_TIER_2_RATE,
+        CONF_TIER_3_RATE,
+        CONF_TIER_4_RATE,
+        CONF_TIER_5_RATE,
+        CONF_TIER_6_RATE,
+        CONF_VAT_RATE,
+        CONF_COST_UNIT,
+    ]
+    for field in required_fields:
+        if field not in entry.data:
+            _LOGGER.error("Missing required field in config entry: %s", field)
+            return
+
     # Create two sensors: cost without VAT and cost with VAT
     sensors = [
         ElectricityCostSensor(hass, entry, kwh_sensor, power_sensor, current_sensor, voltage_sensor, device_name, False),
@@ -60,13 +76,18 @@ class ElectricityCostSensor(SensorEntity):
         self.include_vat = include_vat
 
         # Get pricing tiers, VAT rate, and cost unit from config entry
-        self.tier_1_rate = entry.data[CONF_TIER_1_RATE]
-        self.tier_2_rate = entry.data[CONF_TIER_2_RATE]
-        self.tier_3_rate = entry.data[CONF_TIER_3_RATE]
-        self.tier_4_rate = entry.data[CONF_TIER_4_RATE]
-        self.tier_5_rate = entry.data[CONF_TIER_5_RATE]
-        self.tier_6_rate = entry.data[CONF_TIER_6_RATE]
-        self.vat_rate = entry.data[CONF_VAT_RATE]
+        try:
+            self.tier_1_rate = float(entry.data[CONF_TIER_1_RATE])
+            self.tier_2_rate = float(entry.data[CONF_TIER_2_RATE])
+            self.tier_3_rate = float(entry.data[CONF_TIER_3_RATE])
+            self.tier_4_rate = float(entry.data[CONF_TIER_4_RATE])
+            self.tier_5_rate = float(entry.data[CONF_TIER_5_RATE])
+            self.tier_6_rate = float(entry.data[CONF_TIER_6_RATE])
+            self.vat_rate = float(entry.data[CONF_VAT_RATE])
+        except (ValueError, TypeError) as e:
+            _LOGGER.error("Invalid pricing tier or VAT rate in config entry: %s", e)
+            raise ValueError("Invalid pricing tier or VAT rate in config entry") from e
+
         self.cost_unit = entry.data[CONF_COST_UNIT]
 
         _LOGGER.info("Creating sensor for device: %s with cost unit: %s", self.device_name, self.cost_unit)
@@ -95,6 +116,9 @@ class ElectricityCostSensor(SensorEntity):
                 return 0
             try:
                 value = float(kwh_state.state)
+                if value < 0:
+                    _LOGGER.warning("kWh sensor %s returned a negative value: %s", self.kwh_sensor, value)
+                    return 0
                 # Normalize units (e.g., Wh to kWh, MJ to kWh)
                 unit = kwh_state.attributes.get("unit_of_measurement", "").lower()
                 if unit == "kwh":
@@ -118,6 +142,9 @@ class ElectricityCostSensor(SensorEntity):
                 return 0
             try:
                 value = float(power_state.state)
+                if value < 0:
+                    _LOGGER.warning("Power sensor %s returned a negative value: %s", self.power_sensor, value)
+                    return 0
                 # Normalize units (e.g., kW to W)
                 unit = power_state.attributes.get("unit_of_measurement", "").lower()
                 if unit == "w":
@@ -146,6 +173,9 @@ class ElectricityCostSensor(SensorEntity):
             try:
                 current_value = float(current_state.state)
                 voltage_value = float(voltage_state.state)
+                if current_value < 0 or voltage_value < 0:
+                    _LOGGER.warning("Invalid current or voltage value: current=%s, voltage=%s", current_state.state, voltage_state.state)
+                    return 0
                 # Power (W) = Voltage (V) * Current (A)
                 power_value = voltage_value * current_value
                 # W to kWh: (W * hours) / 1000

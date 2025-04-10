@@ -33,7 +33,8 @@
       "no_sensor_selected": "Please select at least one sensor (kWh, Power, or Current and Voltage).",
       "invalid_number": "Please enter a valid number.",
       "negative_value": "Values must be non-negative.",
-      "empty_cost_unit": "Please enter a cost unit (e.g., VND, USD)."
+      "empty_cost_unit": "Please enter a cost unit (e.g., VND, USD).",
+      "missing_value": "This field cannot be empty."
     }
   }
 }

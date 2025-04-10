@@ -58,6 +58,32 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             entry.setdefault(CONF_VAT_RATE, DEFAULT_VAT_RATE)
             entry.setdefault(CONF_COST_UNIT, DEFAULT_COST_UNIT)
 
+            # Validate pricing tiers and VAT rate
+            for key in [
+                CONF_TIER_1_RATE,
+                CONF_TIER_2_RATE,
+                CONF_TIER_3_RATE,
+                CONF_TIER_4_RATE,
+                CONF_TIER_5_RATE,
+                CONF_TIER_6_RATE,
+                CONF_VAT_RATE,
+            ]:
+                value = entry.get(key)
+                try:
+                    float_value = float(value)
+                    if float_value < 0:
+                        _LOGGER.error("Invalid value for %s in YAML config: %s (must be non-negative)", key, value)
+                        return False
+                except (ValueError, TypeError):
+                    _LOGGER.error("Invalid value for %s in YAML config: %s (must be a number)", key, value)
+                    return False
+
+            # Validate cost unit
+            cost_unit = entry.get(CONF_COST_UNIT)
+            if not cost_unit or str(cost_unit).strip() == "":
+                _LOGGER.error("Cost unit in YAML config cannot be empty")
+                return False
+
             hass.async_create_task(
                 hass.config_entries.flow.async_init(
                     DOMAIN, context={"source": "import"}, data=entry
