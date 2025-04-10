@@ -1,0 +1,17 @@
+{
+    "config": {
+      "step": {
+        "user": {
+          "title": "Set up Electricity Cost Calculator VN",
+          "description": "Enter the kWh sensor and a name for the device.",
+          "data": {
+            "kwh_sensor": "kWh Sensor",
+            "device_name": "Device Name"
+          }
+        }
+      },
+      "error": {
+        "invalid_sensor": "The specified kWh sensor is invalid or unavailable. Please check the entity ID and try again."
+      }
+    }
+  }

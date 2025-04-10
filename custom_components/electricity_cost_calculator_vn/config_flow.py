@@ -1,5 +1,6 @@
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.helpers import entity_registry as er
 import voluptuous as vol
 
 from .const import DOMAIN, CONF_KWH_SENSOR, CONF_DEVICE_NAME
@@ -12,6 +13,19 @@ class ElectricityCostCalculatorVNConfigFlow(config_entries.ConfigFlow, domain=DO
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         errors = {}
+
+        # Get all energy sensors (kWh) from the entity registry
+        entity_registry = er.async_get(self.hass)
+        energy_sensors = [
+            entry.entity_id
+            for entry in entity_registry.entities.values()
+            if entry.entity_id.startswith("sensor.")
+            and entry.device_class == "energy"
+            and entry.unit_of_measurement == "kWh"
+        ]
+
+        if not energy_sensors:
+            errors["base"] = "no_energy_sensors"
 
         if user_input is not None:
             # Validate the kWh sensor
@@ -32,7 +46,7 @@ class ElectricityCostCalculatorVNConfigFlow(config_entries.ConfigFlow, domain=DO
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_KWH_SENSOR): str,
+                    vol.Required(CONF_KWH_SENSOR): vol.In(energy_sensors),
                     vol.Required(CONF_DEVICE_NAME): str,
                 }
             ),
@@ -52,6 +66,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
+        # Get all energy sensors (kWh) from the entity registry
+        entity_registry = er.async_get(self.hass)
+        energy_sensors = [
+            entry.entity_id
+            for entry in entity_registry.entities.values()
+            if entry.entity_id.startswith("sensor.")
+            and entry.device_class == "energy"
+            and entry.unit_of_measurement == "kWh"
+        ]
+
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
@@ -62,7 +86,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_KWH_SENSOR,
                         default=self.config_entry.data.get(CONF_KWH_SENSOR),
-                    ): str,
+                    ): vol.In(energy_sensors),
                     vol.Required(
                         CONF_DEVICE_NAME,
                         default=self.config_entry.data.get(CONF_DEVICE_NAME),
